@@ -5,6 +5,7 @@ import {
   createCollectionSchema,
   updateCollectionSchema,
 } from "../schemas/collection.js";
+import { authMiddleware } from "../middlewares/auth.js";
 
 const r = Router();
 
@@ -18,12 +19,22 @@ r.get("/:slug", collections.getCollection);
 r.get("/:slug/products", collections.getCollectionProducts);
 
 // POST /collections - Create a new collection
-r.post("/", validate(createCollectionSchema), collections.createCollection);
+r.post(
+  "/",
+  authMiddleware,
+  validate(createCollectionSchema),
+  collections.createCollection
+);
 
 // PUT /collections/:slug - Update a collection
-r.put("/:slug", validate(updateCollectionSchema), collections.updateCollection);
+r.put(
+  "/:slug",
+  authMiddleware,
+  validate(updateCollectionSchema),
+  collections.updateCollection
+);
 
 // DELETE /collections/:slug - Delete a collection
-r.delete("/:slug", collections.deleteCollection);
+r.delete("/:slug", authMiddleware, collections.deleteCollection);
 
 export default r;

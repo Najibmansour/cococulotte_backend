@@ -71,3 +71,26 @@ INSERT INTO about_json (key_slug, data) VALUES
     JSON_OBJECT('title','Our Promise','text','Quality and sustainability are at the heart of everything we do. From sourcing the finest materials to ensuring fair labor practices, we are committed to creating fashion that you can feel good about wearing. Join us in our mission to make fashion both beautiful and responsible.','image','/images/IMG_0785.JPG')
   )
 ));
+
+
+-- One JSON row per page/locale
+CREATE TABLE contact_json (
+  id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  key_slug VARCHAR(50) NOT NULL UNIQUE,          -- e.g. 'contact'
+  data JSON NOT NULL,
+  CHECK (JSON_VALID(data)),
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- Seed with your payload
+INSERT INTO contact_json (key_slug, data) VALUES
+('contact', JSON_OBJECT(
+  'headline', 'Get in Touch',
+  'intro', "Have questions about our collections or need assistance? We're here to help you find the perfect piece.",
+  'store', JSON_OBJECT(
+    'address', '123 Fashion Street',
+    'cityCountry', 'Paris, France',
+    'hours', 'Mon-Sat: 10am - 7pm'
+  )
+));

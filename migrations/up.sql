@@ -3,6 +3,7 @@ USE appdb;
 
 DROP TABLE IF EXISTS products;
 DROP TABLE IF EXISTS collections;
+DROP TABLE IF EXISTS about_json;
 
 CREATE TABLE collections (
   slug VARCHAR(191) NOT NULL,
@@ -49,3 +50,24 @@ INSERT INTO products (id,name,price,collection_slug,image_url) VALUES
 ON DUPLICATE KEY UPDATE
 name=VALUES(name),price=VALUES(price),collection_slug=VALUES(collection_slug),image_url=VALUES(image_url);
 
+
+
+
+CREATE TABLE about_json (
+  id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  key_slug VARCHAR(50) NOT NULL UNIQUE,
+  data JSON NOT NULL,
+  CHECK (JSON_VALID(data)),
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+INSERT INTO about_json (key_slug, data) VALUES
+('about', JSON_OBJECT(
+  'title', 'About CocoCulotte',
+  'sections', JSON_ARRAY(
+    JSON_OBJECT('title','Our Story','text','Founded with a passion for elegant design and sustainable fashion, CocoCulotte represents the perfect blend of style and consciousness. Our journey began with a simple idea: to create timeless pieces that make every woman feel confident and beautiful while respecting our planet.','image','/images/IMG_0775.JPG'),
+    JSON_OBJECT('title','Our Vision','text','We envision a world where fashion meets responsibility. Each piece in our collection is thoughtfully designed and crafted using sustainable materials and ethical practices. We believe that true luxury lies in the quality of our craftsmanship and the integrity of our process.','image','/images/IMG_0778.JPG'),
+    JSON_OBJECT('title','Our Promise','text','Quality and sustainability are at the heart of everything we do. From sourcing the finest materials to ensuring fair labor practices, we are committed to creating fashion that you can feel good about wearing. Join us in our mission to make fashion both beautiful and responsible.','image','/images/IMG_0785.JPG')
+  )
+));

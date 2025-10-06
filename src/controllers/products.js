@@ -24,20 +24,20 @@ export const listProducts = async (req, res) => {
     let params = [];
 
     if (collection_slug) {
-      query += " WHERE collection_slug = ?";
+      query += " WHERE collection_slug = ? ";
       params.push(collection_slug);
     }
 
     if (price_min && price_max) {
       query += collection_slug
         ? " AND price BETWEEN ? AND ?"
-        : "WHERE price BETWEEN ? AND ?";
+        : " WHERE price BETWEEN ? AND ?";
       params.push(price_min);
       params.push(price_max);
     }
 
     // Use string interpolation for LIMIT and OFFSET to avoid parameter issues
-    query += ` ORDER BY created_at DESC LIMIT ${parsedLimit} OFFSET ${parsedOffset}`;
+    query += `  ORDER BY id DESC LIMIT ${parsedLimit} OFFSET ${parsedOffset}`;
 
     const products = await executeQuery(query, params);
     log(`listProducts - Successfully fetched ${products.length} products`);

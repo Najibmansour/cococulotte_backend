@@ -8,7 +8,13 @@ import { requestLogger } from "./middlewares/requestLogger.js";
 export const createServer = () => {
   const app = express();
   app.use(helmet());
-  app.use(cors());
+  app.use(
+    cors({
+      origin: "http://localhost:5173", // your React app’s URL
+      methods: ["GET", "POST", "PUT", "DELETE"],
+      credentials: true,
+    })
+  );
   app.use(json());
   app.use(requestLogger);
 

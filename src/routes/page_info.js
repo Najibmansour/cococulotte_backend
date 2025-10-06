@@ -3,18 +3,9 @@ import { Router } from "express";
 import * as page_info from "../controllers/page_info.js";
 import { validate } from "../middlewares/validate.js";
 import { authMiddleware } from "../middlewares/auth.js";
-import {
-  createHomeSchema,
-  updateHomeSchema,
-} from "../schemas/page_info/home.js";
-import {
-  createAboutSchema,
-  updateAboutSchema,
-} from "../schemas/page_info/about.js";
-import {
-  createContactSchema,
-  updateContactSchema,
-} from "../schemas/page_info/contact.js";
+import { updateHomeSchema } from "../schemas/page_info/home.js";
+import { updateAboutSchema } from "../schemas/page_info/about.js";
+import { updateContactSchema } from "../schemas/page_info/contact.js";
 
 const r = Router();
 

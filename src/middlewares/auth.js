@@ -1,6 +1,5 @@
 export function authMiddleware(req, res, next) {
   const token = req.headers["authorization"];
-  console.log(req.headers);
 
   const STATIC_KEY = process.env.ADMIN_PASS;
 

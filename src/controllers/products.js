@@ -119,7 +119,6 @@ export const updateProduct = async (req, res) => {
   const { id } = req.params;
   const { name, price, collection_slug, image_url } = req.body;
   log(`updateProduct - Request started for id: ${id}, name: ${name}`);
-
   try {
     const { executeQuery } = await import("../utils/database.js");
     const result = await executeQuery(
@@ -151,6 +150,7 @@ export const updateProduct = async (req, res) => {
 export const deleteProduct = async (req, res) => {
   const { id } = req.params;
   log(`deleteProduct - Request started for id: ${id}`);
+  console.log(id);
 
   try {
     const { executeQuery } = await import("../utils/database.js");

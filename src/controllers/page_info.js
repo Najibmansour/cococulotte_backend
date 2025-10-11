@@ -56,7 +56,6 @@ export function makeUpdateJsonPageController(cfg) {
   const SCHEMA = cfg.schema;
 
   return async function updateJsonPage(req, res) {
-    // 1) Validate full body against the provided schema
     const parsed = SCHEMA.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({
@@ -66,7 +65,6 @@ export function makeUpdateJsonPageController(cfg) {
     }
     const payload = parsed.data;
 
-    // 2) Upsert: replace entire JSON document for the fixed slug
     try {
       await pool.execute(
         `

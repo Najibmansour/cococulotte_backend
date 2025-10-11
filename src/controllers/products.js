@@ -13,10 +13,8 @@ export const listProducts = async (req, res) => {
   );
 
   try {
-    // Use dynamic import like the test-db endpoint
     const { executeQuery } = await import("../utils/database.js");
 
-    // Validate and parse limit and offset with proper defaults
     const parsedLimit = parseInt(limit) || 50;
     const parsedOffset = parseInt(offset) || 0;
 
@@ -36,7 +34,6 @@ export const listProducts = async (req, res) => {
       params.push(price_max);
     }
 
-    // Use string interpolation for LIMIT and OFFSET to avoid parameter issues
     query += `  ORDER BY id DESC LIMIT ${parsedLimit} OFFSET ${parsedOffset}`;
 
     const products = await executeQuery(query, params);

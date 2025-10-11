@@ -17,6 +17,8 @@
     "express": "^5.1.0",
     "helmet": "^8.1.0",
     "mysql2": "^3.11.5",
+    "nodemailer": "^7.0.9",
+    "uuid": "^13.0.0",
     "zod": "^4.1.11"
   },
   "devDependencies": {

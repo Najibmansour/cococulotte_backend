@@ -34,7 +34,7 @@ export const listProducts = async (req, res) => {
       params.push(price_max);
     }
 
-    query += `  ORDER BY id DESC LIMIT ${parsedLimit} OFFSET ${parsedOffset}`;
+    query += ` ORDER BY id DESC LIMIT ${parsedLimit} OFFSET ${parsedOffset} `;
 
     const products = await executeQuery(query, params);
     log(`listProducts - Successfully fetched ${products.length} products`);

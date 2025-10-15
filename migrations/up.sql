@@ -94,3 +94,101 @@ INSERT INTO contact_json (key_slug, data) VALUES
     'hours', 'Mon-Sat: 10am - 7pm'
   )
 ));
+
+
+
+
+
+
+
+
+
+
+
+
+
+-- TO SELECT ALL PRODUCTS WITH FABRICS AND COLORS
+-- SELECT
+--   p.id, p.name, p.price, p.collection_slug, p.type_slug,
+--   p.image_url, p.created_at, p.updated_at,
+--   COALESCE(fabs.fabrics, JSON_ARRAY()) AS fabrics,
+--   COALESCE(cols.colors,  JSON_ARRAY()) AS colors
+-- FROM products AS p
+-- LEFT JOIN (
+--   SELECT
+--     pf.product_id,
+--     CAST(
+--       CONCAT(
+--         '[',
+--         GROUP_CONCAT(JSON_QUOTE(pf.fabric_slug) ORDER BY pf.position SEPARATOR ','),
+--         ']'
+--       ) AS JSON
+--     ) AS fabrics
+--   FROM product_fabrics AS pf
+--   GROUP BY pf.product_id
+-- ) AS fabs
+--   ON fabs.product_id = p.id
+-- LEFT JOIN (
+--   SELECT
+--     pc.product_id,
+--     CAST(
+--       CONCAT(
+--         '[',
+--         GROUP_CONCAT(JSON_QUOTE(pc.color_slug) ORDER BY pc.position SEPARATOR ','),
+--         ']'
+--       ) AS JSON
+--     ) AS colors
+--   FROM product_colors AS pc
+--   GROUP BY pc.product_id
+-- ) AS cols
+--   ON cols.product_id = p.id
+-- ORDER BY p.id;
+
+
+
+
+
+
+
+
+
+
+-- TO SELECT 1 PRODUCT
+-- SELECT
+--   p.id, p.name, p.price, p.collection_slug, p.type_slug,
+--   p.image_url, p.created_at, p.updated_at,
+--   COALESCE(fabs.fabrics, JSON_ARRAY()) AS fabrics,
+--   COALESCE(cols.colors,  JSON_ARRAY()) AS colors
+-- FROM products AS p
+-- LEFT JOIN (
+--   SELECT
+--     pf.product_id,
+--     CAST(
+--       CONCAT(
+--         '[',
+--         GROUP_CONCAT(JSON_QUOTE(pf.fabric_slug) ORDER BY pf.position SEPARATOR ','),
+--         ']'
+--       ) AS JSON
+--     ) AS fabrics
+--   FROM product_fabrics AS pf
+--   GROUP BY pf.product_id
+-- ) AS fabs
+--   ON fabs.product_id = p.id
+-- LEFT JOIN (
+--   SELECT
+--     pc.product_id,
+--     CAST(
+--       CONCAT(
+--         '[',
+--         GROUP_CONCAT(JSON_QUOTE(pc.color_slug) ORDER BY pc.position SEPARATOR ','),
+--         ']'
+--       ) AS JSON
+--     ) AS colors
+--   FROM product_colors AS pc
+  
+--   GROUP BY pc.product_id
+-- ) AS cols
+--   ON cols.product_id = p.id
+
+-- WHERE p.id= 1
+-- ORDER BY p.id;

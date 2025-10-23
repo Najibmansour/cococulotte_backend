@@ -1,0 +1,15 @@
+0000000000000000000000000000000000000000 266b0da8b815579ccafc676dc1cfa3737e8d379c Najib Mansour BitBucket <najib.mansour@axentech.io> 1759499753 +0300	commit (initial): init commit
+266b0da8b815579ccafc676dc1cfa3737e8d379c 760d4325843644e559da3c7090bf09ae2b47de85 Najib Mansour BitBucket <najib.mansour@axentech.io> 1759693961 +0300	commit: UPDATE: added simple auth middleware
+760d4325843644e559da3c7090bf09ae2b47de85 bb1415368fee76ef6cf8397e41e7964a7e198574 Najib Mansour BitBucket <najib.mansour@axentech.io> 1759696192 +0300	commit: added about page info
+bb1415368fee76ef6cf8397e41e7964a7e198574 4c001a50558f5033eae09b2d5fee784d349aa5d1 Najib Mansour BitBucket <najib.mansour@axentech.io> 1759698408 +0300	commit: UPDATE: added page info with updates CONTACT ABOUT and HOME
+4c001a50558f5033eae09b2d5fee784d349aa5d1 c78b524927e3d90636e66dd5476333987d8260c1 Najib Mansour BitBucket <najib.mansour@axentech.io> 1759762067 +0300	commit: UPDATE: fixed dicker compose to init databse on compose
+c78b524927e3d90636e66dd5476333987d8260c1 42ee8ef781778e0bdd2a3f1af18facb7d64522f3 Najib Mansour BitBucket <najib.mansour@axentech.io> 1759783724 +0300	commit: fix
+42ee8ef781778e0bdd2a3f1af18facb7d64522f3 c969e032f81f8a9036360f839dbfa2223c761568 Najib Mansour BitBucket <najib.mansour@axentech.io> 1759884970 +0300	commit: fixess
+c969e032f81f8a9036360f839dbfa2223c761568 d3342bf48a7e7333640ef10fbccd63f975d558a2 Najib Mansour BitBucket <najib.mansour@axentech.io> 1760189575 +0300	commit: added order processing and email service for irders adn contact
+d3342bf48a7e7333640ef10fbccd63f975d558a2 9ee862d570c4e587ecce297ab9d3e8a2454fd881 Najib Mansour BitBucket <najib.mansour@axentech.io> 1760535015 +0300	commit: test
+9ee862d570c4e587ecce297ab9d3e8a2454fd881 e5c9841f976313383a895cc9cb16eeb801d8e9aa Najib Mansour BitBucket <najib.mansour@axentech.io> 1760548353 +0300	commit: up sql has querry to get all prods
+e5c9841f976313383a895cc9cb16eeb801d8e9aa d3342bf48a7e7333640ef10fbccd63f975d558a2 Najib Mansour BitBucket <najib.mansour@axentech.io> 1760970541 +0300	checkout: moving from main to d3342bf48a7e7333640ef10fbccd63f975d558a2
+d3342bf48a7e7333640ef10fbccd63f975d558a2 e5c9841f976313383a895cc9cb16eeb801d8e9aa Najib Mansour BitBucket <najib.mansour@axentech.io> 1760970612 +0300	checkout: moving from d3342bf48a7e7333640ef10fbccd63f975d558a2 to e5c9841f976313383a895cc9cb16eeb801d8e9aa
+e5c9841f976313383a895cc9cb16eeb801d8e9aa 4d144bb290dfea0080d5a17d0278b50399bdad9b Najib Mansour BitBucket <najib.mansour@axentech.io> 1761087480 +0300	commit: mail ordering done
+4d144bb290dfea0080d5a17d0278b50399bdad9b abeb5a54b6db904e18922d23e7341716fbcd762e Najib Mansour BitBucket <najib.mansour@axentech.io> 1761168965 +0300	commit: finishing product types
+abeb5a54b6db904e18922d23e7341716fbcd762e 55be710f98cca80ef7d5b068e8d0416b5b0822f0 Najib Mansour BitBucket <najib.mansour@axentech.io> 1761218778 +0300	commit: fixed product fetching for types

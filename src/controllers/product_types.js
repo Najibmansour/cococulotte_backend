@@ -8,7 +8,9 @@ export const listTypes = async (req, res) => {
   log("listTypes - Request started");
 
   try {
-    const types = await executeQuery("SELECT * FROM types ORDER BY title");
+    const types = await executeQuery(
+      "SELECT * FROM product_types ORDER BY title"
+    );
     log(`listTypes - Successfully fetched ${types.length} types`);
     res.json({ data: types });
   } catch (error) {

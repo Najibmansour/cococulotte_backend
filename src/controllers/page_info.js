@@ -1,7 +1,7 @@
 import { createAboutSchema } from "../schemas/page_info/about.js";
 import { createContactSchema } from "../schemas/page_info/contact.js";
 import { createHomeSchema } from "../schemas/page_info/home.js";
-import pool, { executeQuery } from "../utils/database.js";
+import { executeQuery } from "../utils/database.js";
 import { log } from "../utils/logger.js";
 
 export const getAbout = async (req, res) => {
@@ -66,11 +66,11 @@ export function makeUpdateJsonPageController(cfg) {
     const payload = parsed.data;
 
     try {
-      await pool.execute(
+      await executeQuery(
         `
           INSERT INTO ${TABLE} (key_slug, data)
-          VALUES (?, ?)
-          ON DUPLICATE KEY UPDATE data = VALUES(data)
+          VALUES ($1, $2)
+          ON CONFLICT (key_slug) DO UPDATE SET data = EXCLUDED.data
         `,
         [SLUG, JSON.stringify(payload)]
       );

@@ -1,6 +1,13 @@
 import { executeQuery } from "../utils/database.js";
 import { log } from "../utils/logger.js";
 
+/**
+ * Collections Controller — PostgreSQL version
+ * - Uses $1..$n placeholders
+ * - Uses RETURNING * to detect 0-row updates/deletes and to return created/updated rows
+ * - Handles unique constraint errors with code '23505'
+ */
+
 export const listCollections = async (req, res) => {
   log("listCollections - Request started");
 
@@ -25,18 +32,18 @@ export const getCollection = async (req, res) => {
   log(`getCollection - Request started for slug: ${slug}`);
 
   try {
-    const collections = await executeQuery(
-      "SELECT * FROM collections WHERE slug = ?",
+    const rows = await executeQuery(
+      "SELECT * FROM collections WHERE slug = $1",
       [slug]
     );
 
-    if (collections.length === 0) {
+    if (rows.length === 0) {
       log(`getCollection - Collection not found for slug: ${slug}`);
       return res.status(404).json({ error: "Collection not found" });
     }
 
     log(`getCollection - Successfully fetched collection: ${slug}`);
-    res.json({ data: collections[0] });
+    res.json({ data: rows[0] });
   } catch (error) {
     log(`getCollection - Error occurred for slug ${slug}:`, error.message);
     console.error("Error fetching collection:", error);
@@ -58,19 +65,21 @@ export const createCollection = async (req, res) => {
       });
     }
 
-    await executeQuery(
-      "INSERT INTO collections (slug, title, header_image, description) VALUES (?, ?, ?, ?)",
-      [slug, title, header_image || null, description || null]
+    const rows = await executeQuery(
+      `INSERT INTO collections (slug, title, header_image, description)
+       VALUES ($1, $2, $3, $4)
+       RETURNING *`,
+      [slug, title, header_image ?? null, description ?? null]
     );
 
     log(`createCollection - Successfully created collection: ${slug}`);
-    const collection = { slug, title, header_image, description };
-    res.status(201).json({ data: collection });
+    res.status(201).json({ data: rows[0] });
   } catch (error) {
     log(`createCollection - Error occurred for slug ${slug}:`, error.message);
     console.error("Error creating collection:", error);
-    if (error.code === "ER_DUP_ENTRY") {
-      log(`createCollection - Duplicate entry error for slug: ${slug}`);
+    if (error.code === "23505") {
+      // unique_violation in Postgres
+      log(`createCollection - Duplicate entry error for slug/title: ${slug}`);
       res
         .status(409)
         .json({ error: "Collection with this slug or title already exists" });
@@ -86,22 +95,31 @@ export const updateCollection = async (req, res) => {
   log(`updateCollection - Request started for slug: ${slug}, title: ${title}`);
 
   try {
-    const result = await executeQuery(
-      "UPDATE collections SET title = ?, header_image = ?, description = ? WHERE slug = ?",
-      [title, header_image, description, slug]
+    const rows = await executeQuery(
+      `UPDATE collections
+         SET title = $1,
+             header_image = $2,
+             description = $3
+       WHERE slug = $4
+       RETURNING *`,
+      [title ?? null, header_image ?? null, description ?? null, slug]
     );
 
-    if (result.affectedRows === 0) {
+    if (rows.length === 0) {
       log(`updateCollection - Collection not found for slug: ${slug}`);
       return res.status(404).json({ error: "Collection not found" });
     }
 
     log(`updateCollection - Successfully updated collection: ${slug}`);
-    const collection = { slug, title, header_image, description };
-    res.json({ data: collection });
+    res.json({ data: rows[0] });
   } catch (error) {
     log(`updateCollection - Error occurred for slug ${slug}:`, error.message);
     console.error("Error updating collection:", error);
+    if (error.code === "23505") {
+      return res
+        .status(409)
+        .json({ error: "Collection with this title already exists" });
+    }
     res.status(500).json({ error: "Failed to update collection" });
   }
 };
@@ -111,12 +129,12 @@ export const deleteCollection = async (req, res) => {
   log(`deleteCollection - Request started for slug: ${slug}`);
 
   try {
-    const result = await executeQuery(
-      "DELETE FROM collections WHERE slug = ?",
+    const rows = await executeQuery(
+      "DELETE FROM collections WHERE slug = $1 RETURNING slug",
       [slug]
     );
 
-    if (result.affectedRows === 0) {
+    if (rows.length === 0) {
       log(`deleteCollection - Collection not found for slug: ${slug}`);
       return res.status(404).json({ error: "Collection not found" });
     }
@@ -132,15 +150,21 @@ export const deleteCollection = async (req, res) => {
 
 export const getCollectionProducts = async (req, res) => {
   const { slug } = req.params;
-  const { limit = 50, offset = 0 } = req.query;
+  const limitSafe = Math.max(0, parseInt(req.query.limit ?? "50", 10));
+  const offsetSafe = Math.max(0, parseInt(req.query.offset ?? "0", 10));
+
   log(
-    `getCollectionProducts - Request started for slug: ${slug}, limit: ${limit}, offset: ${offset}`
+    `getCollectionProducts - Request started for slug: ${slug}, limit: ${limitSafe}, offset: ${offsetSafe}`
   );
 
   try {
     const products = await executeQuery(
-      "SELECT * FROM products WHERE collection_slug = ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
-      [slug, parseInt(limit), parseInt(offset)]
+      `SELECT *
+         FROM products
+        WHERE collection_slug = $1
+        ORDER BY created_at DESC
+        LIMIT $2 OFFSET $3`,
+      [slug, limitSafe, offsetSafe]
     );
 
     log(

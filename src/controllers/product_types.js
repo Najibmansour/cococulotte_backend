@@ -2,6 +2,13 @@ import { executeQuery } from "../utils/database.js";
 import { log } from "../utils/logger.js";
 
 /**
+ * Product Types Controller — PostgreSQL version
+ * - Uses $1..$n placeholders
+ * - Uses RETURNING * to detect 0-row updates/deletes and to return created/updated rows
+ * - Handles unique constraint errors with code '23505'
+ */
+
+/**
  * List all types
  */
 export const listTypes = async (req, res) => {
@@ -28,9 +35,10 @@ export const getType = async (req, res) => {
   log(`getType - Request started for slug: ${slug}`);
 
   try {
-    const types = await executeQuery("SELECT * FROM types WHERE slug = ?", [
-      slug,
-    ]);
+    const types = await executeQuery(
+      "SELECT * FROM product_types WHERE slug = $1",
+      [slug]
+    );
 
     if (types.length === 0) {
       log(`getType - Type not found for slug: ${slug}`);
@@ -63,18 +71,18 @@ export const createType = async (req, res) => {
       });
     }
 
-    await executeQuery("INSERT INTO types (slug, title) VALUES (?, ?)", [
-      slug,
-      title,
-    ]);
+    const rows = await executeQuery(
+      "INSERT INTO product_types (slug, title) VALUES ($1, $2) RETURNING *",
+      [slug, title]
+    );
 
     log(`createType - Successfully created type: ${slug}`);
-    const type = { slug, title };
-    res.status(201).json({ data: type });
+    res.status(201).json({ data: rows[0] });
   } catch (error) {
     log(`createType - Error occurred for slug ${slug}:`, error.message);
     console.error("Error creating type:", error);
-    if (error.code === "ER_DUP_ENTRY") {
+    if (error.code === "23505") {
+      // unique_violation in Postgres
       log(`createType - Duplicate entry error for slug: ${slug}`);
       res
         .status(409)
@@ -94,22 +102,26 @@ export const updateType = async (req, res) => {
   log(`updateType - Request started for slug: ${slug}, title: ${title}`);
 
   try {
-    const result = await executeQuery(
-      "UPDATE types SET title = ? WHERE slug = ?",
+    const rows = await executeQuery(
+      "UPDATE product_types SET title = $1 WHERE slug = $2 RETURNING *",
       [title, slug]
     );
 
-    if (result.affectedRows === 0) {
+    if (rows.length === 0) {
       log(`updateType - Type not found for slug: ${slug}`);
       return res.status(404).json({ error: "Type not found" });
     }
 
     log(`updateType - Successfully updated type: ${slug}`);
-    const type = { slug, title };
-    res.json({ data: type });
+    res.json({ data: rows[0] });
   } catch (error) {
     log(`updateType - Error occurred for slug ${slug}:`, error.message);
     console.error("Error updating type:", error);
+    if (error.code === "23505") {
+      return res
+        .status(409)
+        .json({ error: "Type with this title already exists" });
+    }
     res.status(500).json({ error: "Failed to update type" });
   }
 };
@@ -122,11 +134,12 @@ export const deleteType = async (req, res) => {
   log(`deleteType - Request started for slug: ${slug}`);
 
   try {
-    const result = await executeQuery("DELETE FROM types WHERE slug = ?", [
-      slug,
-    ]);
+    const rows = await executeQuery(
+      "DELETE FROM product_types WHERE slug = $1 RETURNING slug",
+      [slug]
+    );
 
-    if (result.affectedRows === 0) {
+    if (rows.length === 0) {
       log(`deleteType - Type not found for slug: ${slug}`);
       return res.status(404).json({ error: "Type not found" });
     }

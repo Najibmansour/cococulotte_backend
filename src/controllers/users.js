@@ -10,7 +10,6 @@ export const listUsers = async (_req, res) => {
     console.error("Error fetching users:", error);
     res.status(500).json({ error: "Failed to fetch users" });
   }
-  33;
 };
 
 export const createUser = async (req, res) => {
@@ -22,17 +21,16 @@ export const createUser = async (req, res) => {
     }
 
     const id = `u_${Date.now()}`;
-    await executeQuery("INSERT INTO users (id, email, name) VALUES (?, ?, ?)", [
-      id,
-      email,
-      name,
-    ]);
+    const rows = await executeQuery(
+      "INSERT INTO users (id, email, name) VALUES ($1, $2, $3) RETURNING *",
+      [id, email, name]
+    );
 
-    const user = { id, email, name };
-    res.status(201).json({ data: user });
+    res.status(201).json({ data: rows[0] });
   } catch (error) {
     console.error("Error creating user:", error);
-    if (error.code === "ER_DUP_ENTRY") {
+    if (error.code === "23505") {
+      // unique_violation in Postgres
       res.status(409).json({ error: "User with this email already exists" });
     } else {
       res.status(500).json({ error: "Failed to create user" });

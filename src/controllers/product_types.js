@@ -1,5 +1,9 @@
 import { executeQuery } from "../utils/database.js";
 import { log } from "../utils/logger.js";
+import {
+  createProductTypeSchema,
+  updateProductTypeSchema,
+} from "../schemas/productType.js";
 
 /**
  * Product Types Controller — PostgreSQL version
@@ -58,18 +62,11 @@ export const getType = async (req, res) => {
  * Create a new type
  */
 export const createType = async (req, res) => {
-  const { slug, title } = req.body;
-  log(`createType - Request started for slug: ${slug}, title: ${title}`);
-
+  let slug = req.body?.slug;
+  let title = req.body?.title;
   try {
-    if (!slug || !title) {
-      log(
-        `createType - Validation failed: missing required fields - slug: ${!!slug}, title: ${!!title}`
-      );
-      return res.status(400).json({
-        error: "Slug and title are required",
-      });
-    }
+    ({ slug, title } = createProductTypeSchema.parse(req.body));
+    log(`createType - Request started for slug: ${slug}, title: ${title}`);
 
     const rows = await executeQuery(
       "INSERT INTO product_types (slug, title) VALUES ($1, $2) RETURNING *",
@@ -79,6 +76,10 @@ export const createType = async (req, res) => {
     log(`createType - Successfully created type: ${slug}`);
     res.status(201).json({ data: rows[0] });
   } catch (error) {
+    if (error?.errors) {
+      log(`createType - Validation failed for slug ${req.body?.slug}`);
+      return res.status(400).json({ error: error.errors });
+    }
     log(`createType - Error occurred for slug ${slug}:`, error.message);
     console.error("Error creating type:", error);
     if (error.code === "23505") {
@@ -98,10 +99,10 @@ export const createType = async (req, res) => {
  */
 export const updateType = async (req, res) => {
   const { slug } = req.params;
-  const { title } = req.body;
-  log(`updateType - Request started for slug: ${slug}, title: ${title}`);
-
   try {
+    const { title } = updateProductTypeSchema.parse(req.body);
+    log(`updateType - Request started for slug: ${slug}, title: ${title}`);
+
     const rows = await executeQuery(
       "UPDATE product_types SET title = $1 WHERE slug = $2 RETURNING *",
       [title, slug]
@@ -115,6 +116,10 @@ export const updateType = async (req, res) => {
     log(`updateType - Successfully updated type: ${slug}`);
     res.json({ data: rows[0] });
   } catch (error) {
+    if (error?.errors) {
+      log(`updateType - Validation failed for slug ${slug}`);
+      return res.status(400).json({ error: error.errors });
+    }
     log(`updateType - Error occurred for slug ${slug}:`, error.message);
     console.error("Error updating type:", error);
     if (error.code === "23505") {

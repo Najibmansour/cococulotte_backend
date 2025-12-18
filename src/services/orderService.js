@@ -13,7 +13,7 @@ export const generateOrderId = () => {
 export const getProductById = async (productId) => {
   try {
     const products = await executeQuery(
-      "SELECT id, name, price FROM products WHERE id = ?",
+      "SELECT id, name, price FROM products WHERE id = $1",
       [productId]
     );
     return products[0] || null;
@@ -23,21 +23,25 @@ export const getProductById = async (productId) => {
   }
 };
 
-// Get multiple products by IDs
+// Get multiple products by IDs (Postgres-safe)
 export const getProductsByIds = async (productIds) => {
-  try {
-    const placeholders = productIds.map(() => "?").join(",");
-    const products = await executeQuery(
-      `SELECT id, name, price, image_url FROM products WHERE id IN (${placeholders})`,
-      productIds
-    );
-    return products;
-  } catch (error) {
-    console.error("Error fetching products:", error);
-    throw new Error("Failed to fetch products");
+  if (!Array.isArray(productIds) || productIds.length === 0) {
+    return [];
   }
-};
 
+  // Ensure numbers for the query
+  const ids = productIds.map((id) => Number(id));
+
+  const placeholders = ids.map((_, idx) => `$${idx + 1}`).join(",");
+  const query = `
+    SELECT id, name, price, image_url
+    FROM products
+    WHERE id IN (${placeholders})
+  `;
+
+  const products = await executeQuery(query, ids);
+  return products;
+};
 // Create order in database
 export const createOrder = async (orderData) => {
   const orderId = generateOrderId();
@@ -50,17 +54,23 @@ export const createOrder = async (orderData) => {
     items,
   } = orderData;
 
+  if (!items || items.length === 0) {
+    throw new Error("Order must contain at least one item");
+  }
+
   try {
-    // Get product details for all items
-    const productIds = items.map((item) => item.productId);
+    // Normalize productIds to numbers or strings – pick one and be consistent
+    const productIds = items.map((item) => Number(item.productId)); // or String(...)
     const products = await getProductsByIds(productIds);
 
-    // Create a map for quick lookup
-    const productMap = new Map(products.map((p) => [p.id, p]));
+    // Map with normalized string keys
+    const productMap = new Map(products.map((p) => [String(p.id), p]));
 
     // Validate all products exist
     for (const item of items) {
-      if (!productMap.has(item.productId)) {
+      const key = String(item.productId);
+      if (!productMap.has(key)) {
+        console.error("Available products:", products);
         throw new Error(`Product with ID ${item.productId} not found`);
       }
     }
@@ -68,14 +78,15 @@ export const createOrder = async (orderData) => {
     // Calculate total amount
     let totalAmount = 0;
     const orderItems = items.map((item) => {
-      const product = productMap.get(item.productId);
+      const key = String(item.productId);
+      const product = productMap.get(key);
+
       const unitPrice = parseFloat(product.price);
       const totalPrice = unitPrice * item.quantity;
       totalAmount += totalPrice;
-      // console.log(product);
 
       return {
-        productId: item.productId,
+        productId: Number(item.productId), // normalize for DB if needed
         quantity: item.quantity,
         image_url: product.image_url,
         unitPrice,
@@ -86,9 +97,15 @@ export const createOrder = async (orderData) => {
 
     // Insert order
     await executeQuery(
-      `INSERT INTO orders (order_id, customer_name, customer_email, customer_phone, 
-                          shipping_address, order_notes, total_amount) 
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO orders (
+        order_id,
+        customer_name,
+        customer_email,
+        customer_phone,
+        shipping_address,
+        order_notes,
+        total_amount
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
       [
         orderId,
         customerName,
@@ -103,8 +120,13 @@ export const createOrder = async (orderData) => {
     // Insert order items
     for (const item of orderItems) {
       await executeQuery(
-        `INSERT INTO order_items (order_id, product_id, quantity, unit_price, total_price) 
-         VALUES (?, ?, ?, ?, ?)`,
+        `INSERT INTO order_items (
+          order_id,
+          product_id,
+          quantity,
+          unit_price,
+          total_price
+        ) VALUES ($1, $2, $3, $4, $5)`,
         [
           orderId,
           item.productId,
@@ -130,11 +152,17 @@ export const createOrder = async (orderData) => {
 export const getOrderById = async (orderId) => {
   try {
     const orders = await executeQuery(
-      `SELECT o.*, oi.product_id, oi.quantity, oi.unit_price, oi.total_price, p.name as product_name
+      `SELECT 
+         o.*,
+         oi.product_id,
+         oi.quantity,
+         oi.unit_price,
+         oi.total_price,
+         p.name AS product_name
        FROM orders o
        LEFT JOIN order_items oi ON o.order_id = oi.order_id
        LEFT JOIN products p ON oi.product_id = p.id
-       WHERE o.order_id = ?`,
+       WHERE o.order_id = $1`,
       [orderId]
     );
 
@@ -157,8 +185,9 @@ export const getOrderById = async (orderId) => {
         productId: row.product_id,
         name: row.product_name,
         quantity: row.quantity,
-        unitPrice: parseFloat(row.unit_price),
-        totalPrice: parseFloat(row.total_price),
+        unitPrice: row.unit_price != null ? parseFloat(row.unit_price) : null,
+        totalPrice:
+          row.total_price != null ? parseFloat(row.total_price) : null,
       })),
     };
 

@@ -3,6 +3,10 @@ import { z } from "zod";
 
 const NonEmptyString = z.string().min(1, "Required");
 const Slug = z.string().min(1, "Required").max(191, "Too long");
+const Availability = z.enum(
+  ["available", "out_of_stock", "sold"],
+  "Invalid availability"
+);
 
 export const createProductSchema = z.object({
   name: NonEmptyString.max(255, "Name too long"),
@@ -17,6 +21,7 @@ export const createProductSchema = z.object({
   quantity: z.coerce.number().int().min(0).optional().default(0),
   colors: z.array(z.string().min(1)).optional().default([]),
   description: z.string().optional().default(""),
+  availability: Availability.optional().default("available"),
 });
 
 export const updateProductSchema = z
@@ -31,6 +36,7 @@ export const updateProductSchema = z
     quantity: z.coerce.number().int().min(0).optional(),
     colors: z.array(z.string().min(1)).optional(),
     description: z.string().optional(),
+    availability: Availability.optional(),
   })
   // Disallow empty body updates
   .refine((data) => Object.keys(data).length > 0, {
@@ -45,5 +51,5 @@ export const listProductsQuerySchema = z.object({
   offset: z.coerce.number().int().min(0).default(0),
   price_min: z.coerce.number().optional(),
   price_max: z.coerce.number().optional(),
-  available: z.union([z.literal("true"), z.literal("false")]).optional(), // comes as string in query
+  availability: Availability.optional(), // matches enum column
 });

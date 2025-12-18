@@ -37,8 +37,8 @@ export const listProducts = async (req, res) => {
       offset,
       price_min,
       price_max,
-      available,
-    } = req.query;
+      availability,
+    } = listProductsQuerySchema.parse(req.query);
 
     const { executeQuery } = await import("../utils/database.js");
 
@@ -68,8 +68,10 @@ export const listProducts = async (req, res) => {
       params.push(price_max);
     }
 
-    if (available === "true") conditions.push("available = TRUE");
-    if (available === "false") conditions.push("available = FALSE");
+    if (availability) {
+      conditions.push(`availability = $${i++}`);
+      params.push(availability);
+    }
 
     if (conditions.length) query += " WHERE " + conditions.join(" AND ");
 
@@ -125,9 +127,9 @@ export const createProduct = async (req, res) => {
 
     const rows = await executeQuery(
       `INSERT INTO products
-        (name, price, collection_slug, type_slug, image_url, quantity, colors, description)
-       VALUES ($1,   $2,   $3,             $4,       $5,        $6,       $7,     $8)
-       RETURNING id, name, price, collection_slug, type_slug, image_url, quantity, colors, description, available, created_at, updated_at`,
+        (name, price, collection_slug, type_slug, image_url, quantity, colors, description, availability)
+       VALUES ($1,   $2,   $3,             $4,       $5,        $6,       $7,     $8,           $9)
+       RETURNING id, name, price, collection_slug, type_slug, image_url, quantity, colors, description, availability, created_at, updated_at`,
       [
         payload.name,
         payload.price,
@@ -137,6 +139,7 @@ export const createProduct = async (req, res) => {
         payload.quantity ?? 0,
         payload.colors ?? [],
         payload.description ?? "",
+        payload.availability ?? "available",
       ]
     );
 
@@ -176,7 +179,7 @@ export const updateProduct = async (req, res) => {
       `UPDATE products
           SET ${sets.join(", ")}
         WHERE id = $${values.length + 1}
-        RETURNING id, name, price, collection_slug, type_slug, image_url, quantity, colors, description, available, created_at, updated_at`,
+        RETURNING id, name, price, collection_slug, type_slug, image_url, quantity, colors, description, availability, created_at, updated_at`,
       [...values, id]
     );
 

@@ -1,70 +1,69 @@
-// db/postgres.js (or wherever your original file lives)
+// db/postgres.js
 import { Pool } from "pg";
-import { config } from "../config/index.js";
+import { config } from "../config/index.js"; // assumes this reads env
 
-// Prefer a single DATABASE_URL when available (Render gives you this)
-const connectionString = process.env.DATABASE_URL || null;
+const usingUrl = !!process.env.DATABASE_URL;
 
+// Helpful log (safe; doesn't print password)
 console.log("Database config:", {
-  host: connectionString ? "from DATABASE_URL" : config.database.host,
-  port: connectionString ? "from DATABASE_URL" : config.database.port,
-  user: connectionString ? "from DATABASE_URL" : config.database.user,
-  database: connectionString ? "from DATABASE_URL" : config.database.database,
+  via: usingUrl ? "DATABASE_URL" : "individual vars",
+  host: usingUrl ? "from DATABASE_URL" : config.database.host,
+  user: usingUrl ? "from DATABASE_URL" : config.database.user,
+  db: usingUrl ? "from DATABASE_URL" : config.database.database,
+  // ssl: usingUrl ? "maybe" : "disabled",
 });
 
-// Create connection pool
-const pool = new Pool(
-  connectionString
-    ? {
-        connectionString,
-        // Render Postgres requires SSL
-        // ssl: { rejectUnauthorized: false },
-        max: config.database?.connectionLimit || 10,
-      }
-    : {
-        host: config.database.host,
-        port: Number(config.database.port) || 5432,
-        user: config.database.user,
-        password: config.database.password,
-        database: config.database.database,
-        ssl: { rejectUnauthorized: false }, // keep for Render; for local non-SSL you can remove this
-        max: config.database?.connectionLimit || 10,
-      }
-);
+// Pool config for Cloud Run + Cloud SQL (Unix socket)
+const socketConfig = {
+  host: `/cloudsql/${process.env.INSTANCE_CONNECTION_NAME}`, // e.g. cococulottes:us-central1:cococulotte
+  user: process.env.DB_USER || config.database.user,
+  password: process.env.DB_PASS || config.database.password,
+  database: process.env.DB_NAME || config.database.database,
+  // DO NOT set ssl when using the Unix socket
+  max: Number(
+    process.env.DB_POOL_MAX || config.database?.connectionLimit || 10
+  ),
+  // good hygiene:
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 10000,
+};
 
-// Test database connection
+const urlConfig = {
+  connectionString: process.env.DATABASE_URL,
+  // Only enable ssl here if your DATABASE_URL provider requires it
+  // ssl: { rejectUnauthorized: false },
+  max: Number(
+    process.env.DB_POOL_MAX || config.database?.connectionLimit || 10
+  ),
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 10000,
+};
+
+const pool = new Pool(usingUrl ? urlConfig : socketConfig);
+
+// Health check
 export const testConnection = async () => {
   try {
-    const client = await pool.connect();
-    await client.query("SELECT 1;");
-    client.release();
-    console.log("✅ Database connected successfully");
+    const { rows } = await pool.query("SELECT 1");
+    console.log("✅ Database connected:", rows[0]);
     return true;
-  } catch (error) {
-    console.error("❌ Database connection failed:", error.message);
+  } catch (err) {
+    console.error("❌ Database connection failed:", err.message);
     return false;
   }
 };
 
-// Execute query with error handling
-export const executeQuery = async (query, params = []) => {
+export const executeQuery = async (q, params = []) => {
   try {
-    const { rows } = await pool.query(query, params);
-    return rows; // pg returns { rows, rowCount, ... }
-  } catch (error) {
-    console.error("Database query error:", error);
-    throw error;
+    const { rows } = await pool.query(q, params);
+    return rows;
+  } catch (err) {
+    console.error("Database query error:", err);
+    throw err;
   }
 };
 
-// Get a client from the pool (remember to release it)
-export const getConnection = async () => {
-  return await pool.connect(); // call client.release() when done
-};
-
-// Close the connection pool
-export const closePool = async () => {
-  await pool.end();
-};
+export const getConnection = () => pool.connect();
+export const closePool = () => pool.end();
 
 export default pool;

@@ -9,6 +9,7 @@ const allowedOrigins = [
   "http://localhost:5173",
   "https://cococulotte.com",
   "https://www.cococulotte.com",
+  "https://cococulotte-dev.netlify.app",
   "https://www.cococulotte-dev.netlify.app",
 ];
 
@@ -16,7 +17,10 @@ const allowedOrigins = [
 
 export const createServer = () => {
   const app = express();
-  app.use(helmet());
+  app.use((req, _res, next) => {
+  console.log("Incoming Origin:", req.headers.origin);
+  next();
+});
   app.use(
     cors({
       origin: (origin, cb) => {
@@ -29,6 +33,9 @@ export const createServer = () => {
     })
     
   );
+
+  app.use(helmet());
+
   app.use(json());
   app.use(requestLogger);
 

@@ -150,8 +150,22 @@ export const deleteType = async (req, res) => {
     }
 
     log(`deleteType - Successfully deleted type: ${slug}`);
-    res.status(204).send();
+    res.status(200).json({
+      message: "Prooduct Type deleted successfully",
+      data: { slug },
+    });
   } catch (error) {
+    if (error.code === "23503") {
+      log(
+        `deleteType - Foreign key constraint violation for slug ${slug}:`,
+        error.message
+      );
+      return res.status(409).json({
+        error:
+          "Cannot delete this type because it is assigned to products. Reassign or remove the products first.",
+      });
+    }
+
     log(`deleteType - Error occurred for slug ${slug}:`, error.message);
     console.error("Error deleting type:", error);
     res.status(500).json({ error: "Failed to delete type" });

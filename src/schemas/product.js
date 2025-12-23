@@ -19,7 +19,16 @@ export const createProductSchema = z.object({
     .union([z.string().url("Invalid image URL"), z.literal(""), z.null()])
     .optional(),
   quantity: z.coerce.number().int().min(0).optional().default(0),
-  colors: z.array(z.string().min(1)).optional().default([]),
+  colors: z
+    .array(
+      z.object({
+        name: z.string().min(1),
+        hex: z.string().min(1), // could add regex validation for hex
+      })
+    )
+    .optional()
+    .default([]),
+  has_quantity: z.boolean().optional().default(true),
   description: z.string().optional().default(""),
   availability: Availability.optional().default("available"),
 });
@@ -34,7 +43,15 @@ export const updateProductSchema = z
       .union([z.string().url("Invalid image URL"), z.literal(""), z.null()])
       .optional(),
     quantity: z.coerce.number().int().min(0).optional(),
-    colors: z.array(z.string().min(1)).optional(),
+    colors: z
+      .array(
+        z.object({
+          name: z.string().min(1),
+          hex: z.string().min(1),
+        })
+      )
+      .optional(),
+    has_quantity: z.boolean().optional(),
     description: z.string().optional(),
     availability: Availability.optional(),
   })

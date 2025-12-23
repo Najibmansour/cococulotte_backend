@@ -125,11 +125,16 @@ export const createProduct = async (req, res) => {
 
     const imageUrl = nullIfEmpty(payload.image_url ?? null);
 
+    // Auto-availability logic: if quantity is 0, default to out_of_stock
+    if (payload.quantity === 0 && !payload.availability) {
+      payload.availability = "out_of_stock";
+    }
+
     const rows = await executeQuery(
       `INSERT INTO products
-        (name, price, collection_slug, type_slug, image_url, quantity, colors, description, availability)
-       VALUES ($1,   $2,   $3,             $4,       $5,        $6,       $7,     $8,           $9)
-       RETURNING id, name, price, collection_slug, type_slug, image_url, quantity, colors, description, availability, created_at, updated_at`,
+        (name, price, collection_slug, type_slug, image_url, quantity, colors, description, availability, has_quantity)
+       VALUES ($1,   $2,   $3,             $4,       $5,        $6,       $7,     $8,           $9,           $10)
+       RETURNING id, name, price, collection_slug, type_slug, image_url, quantity, colors, description, availability, has_quantity, created_at, updated_at`,
       [
         payload.name,
         payload.price,
@@ -137,9 +142,10 @@ export const createProduct = async (req, res) => {
         payload.type_slug,
         imageUrl,
         payload.quantity ?? 0,
-        payload.colors ?? [],
+        JSON.stringify(payload.colors ?? []), // Ensure JSONB
         payload.description ?? "",
         payload.availability ?? "available",
+        payload.has_quantity ?? true,
       ]
     );
 
@@ -167,6 +173,21 @@ export const updateProduct = async (req, res) => {
     if ("image_url" in payload) {
       payload.image_url = nullIfEmpty(payload.image_url ?? null);
     }
+    
+    // Auto-availability logic: if quantity goes to 0, turn availability off
+    if (payload.quantity === 0) {
+      payload.availability = "out_of_stock";
+    }
+    
+    // Ensure colors are stringified if present
+    if (payload.colors) {
+        // We need to modify payload.colors to be a string if PG requires it, or just leave it.
+        // But buildUpdateSet pushes values directly.
+        // For JSONB, PG accepts objects. Safe to leave as object.
+        // Wait, I did stringify in createProduct. Let's consistency check.
+        // If I stringify here: payload.colors = JSON.stringify(payload.colors);
+        payload.colors = JSON.stringify(payload.colors); 
+    }
 
     const { sets, values } = buildUpdateSet(payload, ["updated_at = now()"]);
 
@@ -179,7 +200,7 @@ export const updateProduct = async (req, res) => {
       `UPDATE products
           SET ${sets.join(", ")}
         WHERE id = $${values.length + 1}
-        RETURNING id, name, price, collection_slug, type_slug, image_url, quantity, colors, description, availability, created_at, updated_at`,
+        RETURNING id, name, price, collection_slug, type_slug, image_url, quantity, colors, description, availability, has_quantity, created_at, updated_at`,
       [...values, id]
     );
 

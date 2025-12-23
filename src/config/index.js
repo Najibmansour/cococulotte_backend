@@ -11,4 +11,11 @@ export const config = {
     database: process.env.DB_NAME ?? "****",
     connectionLimit: parseInt(process.env.DB_CONNECTION_LIMIT ?? "10", 10),
   },
+  r2: {
+    accountId: process.env.R2_ACCOUNT_ID,
+    accessKeyId: process.env.R2_ACCESS_KEY_ID,
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
+    bucket: process.env.R2_BUCKET,
+    publicBaseUrl: process.env.R2_PUBLIC_BASE_URL,
+  },
 };

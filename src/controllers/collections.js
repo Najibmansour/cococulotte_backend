@@ -140,8 +140,22 @@ export const deleteCollection = async (req, res) => {
     }
 
     log(`deleteCollection - Successfully deleted collection: ${slug}`);
-    res.status(204).send();
+    res.status(200).json({
+      message: "Collection deleted successfully",
+      data: { slug },
+    });
   } catch (error) {
+    if (error.code === "23503") {
+      log(
+        `deleteCollection - Foreign key constraint violation for slug ${slug}:`,
+        error.message
+      );
+      return res.status(409).json({
+        error:
+          "Cannot delete this collection because it contains products. Remove the products first.",
+      });
+    }
+
     log(`deleteCollection - Error occurred for slug ${slug}:`, error.message);
     console.error("Error deleting collection:", error);
     res.status(500).json({ error: "Failed to delete collection" });

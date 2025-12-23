@@ -28,13 +28,18 @@ export const createServer = () => {
         if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
         return cb(new Error("Not allowed by CORS"));
       },
-      methods: ["GET", "POST", "PUT", "DELETE"],
+      methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+      allowedHeaders: ["Content-Type", "Authorization"],
+      exposedHeaders: ["ETag", "Content-Length"],
       credentials: true,
     })
     
   );
 
-  app.use(helmet());
+  app.use(helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+  }));
 
   app.use(json());
   app.use(requestLogger);

@@ -28,10 +28,15 @@ export const createOrderEmailTemplate = (orderData) => {
 
   const renderItems = items
     .map(
-      (item) => `
+      (item) => {
+        // Use first image from image_urls array, or fallback to image_url for backward compatibility
+        const imageUrl = (item.image_urls && item.image_urls.length > 0) 
+          ? item.image_urls[0] 
+          : (item.image_url || '');
+        return `
         <tr style="border-bottom:1px solid #eee;">
           <td style="padding:10px; text-align:center;">
-            <img src="${item.image_url}" alt="Product Image" width="80" height="80" style="border-radius:5px; display:block; margin:auto;" />
+            <img src="${imageUrl}" alt="Product Image" width="80" height="80" style="border-radius:5px; display:block; margin:auto;" />
           </td>
           <td style="padding:10px; vertical-align:top;">
             <strong style="font-size:14px; color:#333;">${item.productName}</strong><br/>
@@ -43,7 +48,8 @@ export const createOrderEmailTemplate = (orderData) => {
             <strong style="font-size:14px; color:#2c3e50;">$${item.totalPrice}</strong>
           </td>
         </tr>
-      `
+      `;
+      }
     )
     .join("");
 

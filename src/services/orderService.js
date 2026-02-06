@@ -34,7 +34,7 @@ export const getProductsByIds = async (productIds) => {
 
   const placeholders = ids.map((_, idx) => `$${idx + 1}`).join(",");
   const query = `
-    SELECT id, name, price, image_url
+    SELECT id, name, price, image_urls
     FROM products
     WHERE id IN (${placeholders})
   `;
@@ -88,7 +88,11 @@ export const createOrder = async (orderData) => {
       return {
         productId: Number(item.productId), // normalize for DB if needed
         quantity: item.quantity,
-        image_url: product.image_url,
+        image_urls: product.image_urls || [], // array of image URLs
+        image_url:
+          product.image_urls && product.image_urls.length > 0
+            ? product.image_urls[0]
+            : null, // first image for backward compatibility
         unitPrice,
         totalPrice,
         productName: product.name,

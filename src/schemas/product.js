@@ -15,9 +15,10 @@ export const createProductSchema = z.object({
   collection_slug: Slug,
   type_slug: Slug, // REQUIRED by DB
   // Optional fields with sensible defaults/nullable handling
-  image_url: z
-    .union([z.string().url("Invalid image URL"), z.literal(""), z.null()])
-    .optional(),
+  image_urls: z
+    .array(z.string().url("Invalid image URL"))
+    .optional()
+    .default([]),
   quantity: z.coerce.number().int().min(0).optional().default(0),
   colors: z
     .array(
@@ -39,9 +40,7 @@ export const updateProductSchema = z
     price: z.coerce.number().positive().optional(),
     collection_slug: Slug.optional(),
     type_slug: Slug.optional(),
-    image_url: z
-      .union([z.string().url("Invalid image URL"), z.literal(""), z.null()])
-      .optional(),
+    image_urls: z.array(z.string().url("Invalid image URL")).optional(),
     quantity: z.coerce.number().int().min(0).optional(),
     colors: z
       .array(

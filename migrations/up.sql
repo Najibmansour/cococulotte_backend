@@ -44,12 +44,15 @@ CREATE TABLE products (
   price NUMERIC(10,2) NOT NULL,
   collection_slug TEXT NOT NULL REFERENCES collections(slug) ON DELETE CASCADE,
   type_slug TEXT NOT NULL REFERENCES product_types(slug) ON DELETE CASCADE,
-  image_url TEXT,
+
+  -- CHANGED: images are now an array of URLs
+  image_urls TEXT[] NOT NULL DEFAULT '{}',
+
   quantity INTEGER NOT NULL DEFAULT 0 CHECK (quantity >= 0),
   colors JSONB NOT NULL DEFAULT '[]', -- array of objects: [{name: "Noir", hex: "#000000"}]
   has_quantity BOOLEAN NOT NULL DEFAULT TRUE, -- if false, "1 piece only" or untracked
   description TEXT NOT NULL DEFAULT '',
-  
+
   -- availability now fully controlled by backend, NOT tied to quantity
   availability availability_status NOT NULL DEFAULT 'available',
 
@@ -63,6 +66,9 @@ CREATE INDEX ix_products_price           ON products (price);
 CREATE INDEX ix_products_name            ON products (name);
 CREATE INDEX ix_products_colors_gin      ON products USING gin (colors);
 CREATE INDEX ix_products_availability    ON products (availability);
+
+-- Optional but useful if you ever search inside the array:
+-- CREATE INDEX ix_products_image_urls_gin ON products USING gin (image_urls);
 
 -- ===== JSON tables =====
 CREATE TABLE about_json (
@@ -151,34 +157,38 @@ SET title=EXCLUDED.title,
     header_image=EXCLUDED.header_image,
     description=EXCLUDED.description;
 
--- product_types
+-- product_types (FIXED: removed trailing comma)
 INSERT INTO product_types (slug, title) VALUES
-('all','All'),
-('undies','Undies'),
-('accessories','Accessories'),
-('other','Other')
+('undies','Undies')
 ON CONFLICT (slug) DO UPDATE
 SET title=EXCLUDED.title;
 
 -- products with hex colors (migrated to JSONB objects)
-INSERT INTO products (id, name, price, collection_slug, type_slug, image_url, quantity, colors, has_quantity, description)
+-- CHANGED: image_urls is now TEXT[] (array of urls)
+-- FIXED: removed trailing comma after the row
+INSERT INTO products (id, name, price, collection_slug, type_slug, image_urls, quantity, colors, has_quantity, description)
 VALUES
-(1,'Elegant Noir',      199.99,'summer-2024','undies','https://placehold.co/600x800/1a1a1a/ffffff', 25, '[{"name": "#000000", "hex": "#000000"}, {"name": "#FF0000", "hex": "#FF0000"}]'::jsonb, true, 'Refined, premium piece.'),
-(2,'Midnight Dream',    149.99,'summer-2024','undies','https://placehold.co/400x400/1a1a1a/ffffff',  0, '[{"name": "#000000", "hex": "#000000"}]'::jsonb, true, 'Currently out of stock.'),
-(3,'Dark Romance',      299.99,'spring-elegance','undies','https://placehold.co/400x400/1a1a1a/ffffff', 12, '[{"name": "#000000", "hex": "#000000"}, {"name": "#FFFFFF", "hex": "#FFFFFF"}]'::jsonb, true, 'Statement silhouette.'),
-(4,'Gothic Grace',      179.99,'winter-dreams','accessories','https://placehold.co/400x400/1a1a1a/ffffff',  7, '[{"name": "#C0C0C0", "hex": "#C0C0C0"}]'::jsonb, true, 'Winter accessory essential.'),
-(5,'Mystic Allure',     249.99,'autumn-mystery','all','https://placehold.co/400x400/1a1a1a/ffffff',  9, '[{"name": "#000000", "hex": "#000000"}, {"name": "#FFD700", "hex": "#FFD700"}]'::jsonb, true, 'Timeless autumn favorite.'),
-(6,'Velvet Shadow',     189.99,'summer-2024','undies','https://placehold.co/400x400/1a1a1a/ffffff', 18, '[{"name": "#000000", "hex": "#000000"}]'::jsonb, true, 'Soft velvet touch.'),
-(7,'Ethereal Whisper',  219.99,'spring-elegance','other','https://placehold.co/400x400/1a1a1a/ffffff', 5, '[{"name": "#FFFFFF", "hex": "#FFFFFF"}]'::jsonb, true, 'Lightweight and airy.'),
-(8,'Frost Enchantment', 259.99,'winter-dreams','accessories','https://placehold.co/400x400/1a1a1a/ffffff', 3, '[{"name": "#00BFFF", "hex": "#00BFFF"}, {"name": "#FFFFFF", "hex": "#FFFFFF"}]'::jsonb, true, 'Frosty elegance.'),
-(9,'Twilight Reverie',  169.99,'autumn-mystery','other','https://placehold.co/400x400/1a1a1a/ffffff', 14, '[{"name": "#800080", "hex": "#800080"}]'::jsonb, true, 'Dreamy twilight tones.'),
-(10,'Moonlit Serenade', 229.99,'summer-2024','accessories','https://placehold.co/400x400/1a1a1a/ffffff', 11, '[{"name": "#C0C0C0", "hex": "#C0C0C0"}, {"name": "#000000", "hex": "#000000"}]'::jsonb, true, 'Shines under moonlight.')
+(
+  1,
+  'Elegant Noir',
+  199.99,
+  'summer-2024',
+  'undies',
+  ARRAY[
+    'https://placehold.co/600x800/1a1a1a/ffffff',
+    'https://placehold.co/600x800/000000/ffffff'
+  ],
+  25,
+  '[{"name": "#000000", "hex": "#000000"}, {"name": "#FF0000", "hex": "#FF0000"}]'::jsonb,
+  true,
+  'Refined, premium piece.'
+)
 ON CONFLICT (id) DO UPDATE
 SET name=EXCLUDED.name,
     price=EXCLUDED.price,
     collection_slug=EXCLUDED.collection_slug,
     type_slug=EXCLUDED.type_slug,
-    image_url=EXCLUDED.image_url,
+    image_urls=EXCLUDED.image_urls,
     quantity=EXCLUDED.quantity,
     colors=EXCLUDED.colors,
     description=EXCLUDED.description;
@@ -207,3 +217,44 @@ INSERT INTO contact_json (key_slug, data) VALUES
     'hours', 'Mon-Sat: 10am - 7pm'
   )
 ));
+
+
+
+-- add order_pk_id on order_items
+ALTER TABLE order_items ADD COLUMN order_pk_id BIGINT;
+
+-- backfill
+UPDATE order_items oi
+SET order_pk_id = o.id
+FROM orders o
+WHERE o.order_id = oi.order_id;
+
+-- make it required
+ALTER TABLE order_items ALTER COLUMN order_pk_id SET NOT NULL;
+
+-- add FK
+ALTER TABLE order_items
+  ADD CONSTRAINT fk_order_items_orders_id
+  FOREIGN KEY (order_pk_id) REFERENCES orders(id) ON DELETE CASCADE;
+
+-- index
+CREATE INDEX IF NOT EXISTS ix_order_items_order_pk_id ON order_items(order_pk_id);
+
+-- optional: drop old text FK later once app is updated
+-- ALTER TABLE order_items DROP CONSTRAINT ... (if any)
+-- ALTER TABLE order_items DROP COLUMN order_id;
+
+
+ALTER TABLE products     ALTER COLUMN created_at TYPE timestamptz USING created_at AT TIME ZONE 'UTC';
+ALTER TABLE products     ALTER COLUMN updated_at TYPE timestamptz USING updated_at AT TIME ZONE 'UTC';
+ALTER TABLE orders       ALTER COLUMN created_at TYPE timestamptz USING created_at AT TIME ZONE 'UTC';
+ALTER TABLE orders       ALTER COLUMN updated_at TYPE timestamptz USING updated_at AT TIME ZONE 'UTC';
+ALTER TABLE about_json   ALTER COLUMN created_at TYPE timestamptz USING created_at AT TIME ZONE 'UTC';
+ALTER TABLE about_json   ALTER COLUMN updated_at TYPE timestamptz USING updated_at AT TIME ZONE 'UTC';
+ALTER TABLE contact_json ALTER COLUMN created_at TYPE timestamptz USING created_at AT TIME ZONE 'UTC';
+ALTER TABLE contact_json ALTER COLUMN updated_at TYPE timestamptz USING updated_at AT TIME ZONE 'UTC';
+ALTER TABLE order_items  ALTER COLUMN created_at TYPE timestamptz USING created_at AT TIME ZONE 'UTC';
+
+
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE INDEX IF NOT EXISTS ix_products_name_trgm ON products USING gin (name gin_trgm_ops);

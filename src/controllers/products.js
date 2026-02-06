@@ -6,8 +6,6 @@ import {
   listProductsQuerySchema,
 } from "../schemas/product.js";
 
-const nullIfEmpty = (v) => (v === "" || v === undefined ? null : v);
-
 /** Build dynamic SET clause for UPDATE based on provided fields */
 function buildUpdateSet(obj, extraPairs = []) {
   const keys = Object.keys(obj);
@@ -123,8 +121,6 @@ export const createProduct = async (req, res) => {
 
     const { executeQuery } = await import("../utils/database.js");
 
-    const imageUrl = nullIfEmpty(payload.image_url ?? null);
-
     // Auto-availability logic: if quantity is 0, default to out_of_stock
     if (payload.quantity === 0 && !payload.availability) {
       payload.availability = "out_of_stock";
@@ -132,15 +128,15 @@ export const createProduct = async (req, res) => {
 
     const rows = await executeQuery(
       `INSERT INTO products
-        (name, price, collection_slug, type_slug, image_url, quantity, colors, description, availability, has_quantity)
+        (name, price, collection_slug, type_slug, image_urls, quantity, colors, description, availability, has_quantity)
        VALUES ($1,   $2,   $3,             $4,       $5,        $6,       $7,     $8,           $9,           $10)
-       RETURNING id, name, price, collection_slug, type_slug, image_url, quantity, colors, description, availability, has_quantity, created_at, updated_at`,
+       RETURNING id, name, price, collection_slug, type_slug, image_urls, quantity, colors, description, availability, has_quantity, created_at, updated_at`,
       [
         payload.name,
         payload.price,
         payload.collection_slug,
         payload.type_slug,
-        imageUrl,
+        payload.image_urls ?? [], // PostgreSQL TEXT[] array
         payload.quantity ?? 0,
         JSON.stringify(payload.colors ?? []), // Ensure JSONB
         payload.description ?? "",
@@ -169,24 +165,19 @@ export const updateProduct = async (req, res) => {
   try {
     const payload = updateProductSchema.parse(req.body);
 
-    // Normalize image_url empty string to NULL for DB
-    if ("image_url" in payload) {
-      payload.image_url = nullIfEmpty(payload.image_url ?? null);
-    }
-    
     // Auto-availability logic: if quantity goes to 0, turn availability off
     if (payload.quantity === 0) {
       payload.availability = "out_of_stock";
     }
-    
+
     // Ensure colors are stringified if present
     if (payload.colors) {
-        // We need to modify payload.colors to be a string if PG requires it, or just leave it.
-        // But buildUpdateSet pushes values directly.
-        // For JSONB, PG accepts objects. Safe to leave as object.
-        // Wait, I did stringify in createProduct. Let's consistency check.
-        // If I stringify here: payload.colors = JSON.stringify(payload.colors);
-        payload.colors = JSON.stringify(payload.colors); 
+      payload.colors = JSON.stringify(payload.colors);
+    }
+
+    // Ensure image_urls is an array if present (default to empty array)
+    if ("image_urls" in payload) {
+      payload.image_urls = payload.image_urls ?? [];
     }
 
     const { sets, values } = buildUpdateSet(payload, ["updated_at = now()"]);
@@ -200,7 +191,7 @@ export const updateProduct = async (req, res) => {
       `UPDATE products
           SET ${sets.join(", ")}
         WHERE id = $${values.length + 1}
-        RETURNING id, name, price, collection_slug, type_slug, image_url, quantity, colors, description, availability, has_quantity, created_at, updated_at`,
+        RETURNING id, name, price, collection_slug, type_slug, image_urls, quantity, colors, description, availability, has_quantity, created_at, updated_at`,
       [...values, id]
     );
 

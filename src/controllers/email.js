@@ -1,5 +1,5 @@
-import { sendOrderEmail, sendContactEmail } from "../services/emailService.js";
-import { createOrder, getOrderById } from "../services/orderService.js";
+import { sendContactEmail } from "../services/emailService.js";
+import { createOrder } from "../services/orderService.js";
 
 export const sendOrder = async (req, res) => {
   try {
@@ -7,34 +7,12 @@ export const sendOrder = async (req, res) => {
 
     const orderResult = await createOrder(orderData);
 
-    const emailOrderData = {
+    res.status(200).json({
+      success: true,
+      message: "Order created successfully",
       orderId: orderResult.orderId,
-      customerName: orderData.customerName,
-      customerEmail: orderData.customerEmail,
-      customerPhone: orderData.customerPhone,
-      items: orderResult.items,
       totalAmount: orderResult.totalAmount,
-      shippingAddress: orderData.shippingAddress,
-      orderNotes: orderData.orderNotes,
-    };
-
-    const result = await sendOrderEmail(emailOrderData, process.env.EMAIL_USER);
-
-    if (result.success) {
-      res.status(200).json({
-        success: true,
-        message: "Order email sent successfully",
-        orderId: orderResult.orderId,
-        totalAmount: orderResult.totalAmount,
-        messageId: result.messageId,
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        message: "Failed to send order email",
-        error: result.error,
-      });
-    }
+    });
   } catch (error) {
     console.error("Error in sendOrder controller:", error);
     res.status(500).json({

@@ -146,43 +146,6 @@ FOR EACH ROW EXECUTE FUNCTION set_timestamp();
 
 -- ===== Seed data =====
 
--- collections
-INSERT INTO collections (slug, title, header_image, description) VALUES
-('summer-2024','Summer Collection 2024','https://placehold.co/1920x600/1a1a1a/ffffff','Discover our exclusive designs'),
-('spring-elegance','Spring Elegance','https://placehold.co/1920x600/1a1a1a/ffffff','Discover our exclusive designs'),
-('winter-dreams','Winter Dreams','https://placehold.co/1920x600/1a1a1a/ffffff','Discover our exclusive designs'),
-('autumn-mystery','Autumn Mystery','https://placehold.co/1920x600/1a1a1a/ffffff','Discover our exclusive designs')
-ON CONFLICT (slug) DO UPDATE
-SET title=EXCLUDED.title,
-    header_image=EXCLUDED.header_image,
-    description=EXCLUDED.description;
-
--- product_types (FIXED: removed trailing comma)
-INSERT INTO product_types (slug, title) VALUES
-('undies','Undies')
-ON CONFLICT (slug) DO UPDATE
-SET title=EXCLUDED.title;
-
--- products with hex colors (migrated to JSONB objects)
--- CHANGED: image_urls is now TEXT[] (array of urls)
--- FIXED: removed trailing comma after the row
-INSERT INTO products (id, name, price, collection_slug, type_slug, image_urls, quantity, colors, has_quantity, description)
-VALUES
-(
-  1,
-  'Elegant Noir',
-  199.99,
-  'summer-2024',
-  'undies',
-  ARRAY[
-    'https://placehold.co/600x800/1a1a1a/ffffff',
-    'https://placehold.co/600x800/000000/ffffff'
-  ],
-  25,
-  '[{"name": "#000000", "hex": "#000000"}, {"name": "#FF0000", "hex": "#FF0000"}]'::jsonb,
-  true,
-  'Refined, premium piece.'
-)
 ON CONFLICT (id) DO UPDATE
 SET name=EXCLUDED.name,
     price=EXCLUDED.price,
@@ -217,32 +180,6 @@ INSERT INTO contact_json (key_slug, data) VALUES
     'hours', 'Mon-Sat: 10am - 7pm'
   )
 ));
-
-
-
--- add order_pk_id on order_items
-ALTER TABLE order_items ADD COLUMN order_pk_id BIGINT;
-
--- backfill
-UPDATE order_items oi
-SET order_pk_id = o.id
-FROM orders o
-WHERE o.order_id = oi.order_id;
-
--- make it required
-ALTER TABLE order_items ALTER COLUMN order_pk_id SET NOT NULL;
-
--- add FK
-ALTER TABLE order_items
-  ADD CONSTRAINT fk_order_items_orders_id
-  FOREIGN KEY (order_pk_id) REFERENCES orders(id) ON DELETE CASCADE;
-
--- index
-CREATE INDEX IF NOT EXISTS ix_order_items_order_pk_id ON order_items(order_pk_id);
-
--- optional: drop old text FK later once app is updated
--- ALTER TABLE order_items DROP CONSTRAINT ... (if any)
--- ALTER TABLE order_items DROP COLUMN order_id;
 
 
 ALTER TABLE products     ALTER COLUMN created_at TYPE timestamptz USING created_at AT TIME ZONE 'UTC';

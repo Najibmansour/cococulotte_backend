@@ -1,7 +1,39 @@
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 
+import net from "net";
 dotenv.config();
+
+// TEMP: connectivity test
+function testPort(host, port) {
+  return new Promise((resolve) => {
+    const socket = net.createConnection(port, host);
+    const t = setTimeout(() => {
+      socket.destroy();
+      resolve({ host, port, ok: false, reason: "timeout" });
+    }, 8000);
+
+    socket.on("connect", () => {
+      clearTimeout(t);
+      socket.end();
+      resolve({ host, port, ok: true });
+    });
+
+    socket.on("error", (err) => {
+      clearTimeout(t);
+      resolve({ host, port, ok: false, reason: err.message });
+    });
+  });
+}
+
+// run once on startup
+(async () => {
+  console.log("SMTP connectivity test:");
+  console.log(await testPort("smtp.gmail.com", 587));
+  console.log(await testPort("smtp.gmail.com", 465));
+})();
+
+
 
 const createTransporter = () => {
   return nodemailer.createTransport({
